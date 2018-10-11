@@ -1,0 +1,942 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Sep 21 15:02:14 2018
+
+@author: z5228341
+"""
+    # Import packages
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import colors as mcolors
+from mpl_toolkits.basemap import Basemap
+from scipy.stats import norm
+import pandas as pd
+import glob
+import xarray as xr
+import plotly.plotly as py
+import plotly.graph_objs as go
+from mpl_toolkits.axes_grid.inset_locator import zoomed_inset_axes
+from mpl_toolkits.axes_grid.inset_locator import mark_inset
+import matplotlib.backends.backend_pdf #import PdfPages
+import os
+import matplotlib.patches as mpatches
+import plotly
+import scipy
+from matplotlib.colors import ListedColormap
+#plotly.tools.set_credentials_file(username='sophietje1994', 
+                                 # api_key='FkA9gXvZqypPjQTSqT8q')
+print("pipo de clown blablabla")
+#Import the files
+files_met = sorted(glob.glob("/home/z5228341/Desktop/Met/*"))
+files_flux = sorted(glob.glob("/home/z5228341/Desktop/Flux/*"))
+
+#Setting up figures to which I can add subplots
+fig0 = plt.figure()
+fig1 = plt.figure(figsize = (12,18))
+fig2 = plt.figure(figsize = (12,18))
+fig3 = plt.figure(figsize = (12,27))
+fig4 = plt.figure(figsize = (12,18))
+fig5 = plt.figure (figsize = (12,18))
+fig6 = plt.figure(figsize = (12,27))
+fig7 = plt.figure(figsize = (12,18))
+fig8 = plt.figure (figsize = (12,18))
+fig9 = plt.figure(figsize = (12,27))
+fig10 = plt.figure()
+fig11 = plt.figure()
+fig12 = plt.figure()
+fig13 = plt.figure(figsize = (10,15))
+fig15 = plt.figure(figsize = (12,18))
+
+#function to open and organize data
+def open_file(fname):
+    ds = xr.open_dataset(fname)
+    ds = ds.squeeze(dim=["x","y"], drop=True).to_dataframe()
+    ds = ds.reset_index()
+    ds = ds.set_index('time') 
+    return (ds)
+
+#function for color coding table
+def color(val):
+    if val>=0.9:
+        color='rgba(0,250,0, 1.0)'
+    elif val>= 0.8 and val<0.9:
+        color='rgba(0,250,0, 0.3)'
+    elif val>= 0.7 and val<0.8:
+        color='rgba(0,250,0, 0.1)'
+    elif val>= 0.6 and val<0.7:
+        color='rgba(0,250,0, 0.0)'       
+    elif val>= 0.5 and val<0.6:
+        color='rgba(255,0,0, 0.1)'
+    elif val>= 0.4 and val<0.5:
+        color='rgba(255,0,0, 0.6)'
+    elif val<0.4:
+        color='rgba(255,0,0, 1.0)'
+    else:
+        color = 'rgba(0,0,0, 1.0)'
+    return(color)
+    
+#fuction for making temperature-precipitation plots
+def prectemp(temp, precip, vals, title, ax, marker):
+    cmap = matplotlib.colors.ListedColormap(['red', 'coral', 'peachpuff', 'lightblue', 'blue', 'darkblue'])
+    norm = matplotlib.colors.BoundaryNorm([0, 0.3, 0.5, 0.7, 0.8, 0.9, 1.0], cmap.N)
+    sc = ax.scatter(temp, precip, s= 30, c= vals, cmap = cmap,
+                            norm = norm  )
+    plt.colorbar(sc, ax = ax, orientation="vertical", 
+                 boundaries = [0, 0.3, 0.5, 0.7, 0.8, 0.9, 1.0], 
+                 spacing = 'proportional', 
+                 ticks = [0, 0.3, 0.5, 0.7, 0.8, 0.9, 1.0])
+    
+    ax.set_xlabel("Temperature (C)")
+    ax.set_ylabel("Precipitation (m)")
+    ax.set_title(title)
+    return(fig) 
+  
+#fuction for making maps     
+def zoommap(vals, title):
+    fig =  plt.figure(figsize=(12,8))    
+    plt.subplots_adjust(left=0.05,right=0.95,top=0.90,bottom=0.05,
+                        wspace=0.15,hspace=0.05)
+    ax = plt.subplot(211)
+    m = Basemap(projection = 'mill', llcrnrlat = -45, llcrnrlon = -160, 
+                urcrnrlat= 82, urcrnrlon = 170, resolution = 'c')
+    x,y = m(lons, lats)
+    m.drawcoastlines()
+    plt.subplots_adjust(left=0.05,right=0.95,top=0.90,bottom=0.05,
+                        wspace=0.15,hspace=0.05)
+    cmap = matplotlib.colors.ListedColormap(['red', 'coral', 'peachpuff', 'lightblue', 'blue', 'darkblue'])
+    bounds = [0, 0.3, 0.5, 0.7, 0.8, 0.9, 1.0]
+    norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N)
+    m.scatter(x, y, s = 40, c = vals, cmap=cmap, norm=norm)
+    plt.colorbar(orientation="vertical", boundaries = bounds, 
+                 spacing = 'proportional', 
+                 ticks = bounds)
+    plt.title(title)
+    #Zoom Europe
+    axins_1 = zoomed_inset_axes(ax, 2, loc=2, bbox_to_anchor=(0.396, 0.48),
+                         bbox_transform=ax.figure.transFigure)
+    axins_1.scatter(x, y, s = 30, c = vals, cmap=cmap,
+                    norm=norm)
+    m.drawcoastlines()
+    x2,y2 = m(-12,35) 
+    x3,y3 = m(40,65)
+    axins_1.set_xlim(x2,x3) 
+    axins_1.set_ylim(y2,y3) 
+    axes = mark_inset(ax, axins_1, loc1=1, loc2=2,
+            linewidth=1)
+    #Zoom Australia
+    axins_2 = zoomed_inset_axes(ax, 2.2, loc=3, bbox_to_anchor=(0.59, 0.255),
+                         bbox_transform=ax.figure.transFigure)
+    axins_2.scatter(x, y, s = 30, c = vals, cmap=cmap,
+                    norm=norm)
+    m.drawcoastlines()
+    x2,y2 = m(110,-43) 
+    x3,y3 = m(155,-10)
+    axins_2.set_xlim(x2,x3) # and we apply the limits of the zoom plot to 
+    #the inset axes
+    axins_2.set_ylim(y2,y3) # idem
+    axes = mark_inset(ax, axins_2, loc1=1, loc2=2,
+            linewidth=1)
+    #Zoom US
+    axins_3 = zoomed_inset_axes(ax, 1.6, loc=3, bbox_to_anchor=(0.19, 0.25),
+                         bbox_transform=ax.figure.transFigure)
+    axins_3.scatter(x, y, s = 30, c = vals, cmap=cmap,
+                    norm=norm)
+    m.drawcoastlines()
+    x2,y2 = m(-130,22) 
+    x3,y3 = m(-60,63)
+    axins_3.set_xlim(x2,x3) # and we apply the limits of the zoom plot to 
+    #the inset axes
+    axins_3.set_ylim(y2,y3) # idem
+    axes = mark_inset(ax, axins_3, loc1=1, loc2=2,
+            linewidth=1)
+    return(fig, axes)
+
+# empty lists to add data in for the table/figures
+resultsLH = []
+resultsSH = []
+resultsNEE = []
+lons=[]
+lats=[]
+
+#creation of for loop which analyzes each Fluxdataset
+for m,f in zip(files_met, files_flux):
+    print(m,f)
+      
+        #Opening the files 
+    ds_met = open_file(m)
+    ds_flux = open_file(f)
+        #Does the data have enough recorded temperatures? First, selecting 
+        #only measurements with qc =0. Second, two conditions: the total length
+        #of the dataset and the percentage of measured temperatures. 
+    Tair_measured = ds_met[ds_met.Tair_qc < 1]
+    mean_tair_measured = np.mean(Tair_measured.Tair)
+    Mean_precipitation_measured_yearly = ((ds_met.Rainf.mean())*48*365) #not all datasets had a qc for this. 
+    if len(ds_met) > ((2*365*48)/3) and (len(Tair_measured)/len(ds_met))>0.5:
+
+            # Filter to measured temperature (qc=0) and only shortwave 
+            #incoming radiation >0
+            ds_flux = ds_flux[ds_met.Tair_qc < 1]
+            ds_met = ds_met[ds_met.Tair_qc < 1]
+            ds_flux = ds_flux[ds_met.SWdown > 1]
+            ds_met = ds_met[ds_met.SWdown > 1]
+            ds_flux = ds_flux.drop(ds_flux.between_time("23:00", "6:00").index)
+            ds_met = ds_met.drop(ds_met.between_time("23:00", "6:00").index)
+
+
+            # Create plot normal distribution of the temperature
+            stdev_tair_measured = np.std(Tair_measured.Tair)
+            parameters = norm.fit(ds_met.Tair)
+            x = np.linspace(min(ds_met.Tair), max(ds_met.Tair), 1000)
+            normal_pdf = norm.pdf(x, mean_tair_measured, stdev_tair_measured)      
+            ax = fig0.add_subplot(111)
+            ax.plot(x, normal_pdf, "blue", label=m, linewidth=2)
+            ax.set_title("Temperature distribution") 
+            ax.set_xlabel("Temperature")                                      
+            ax.set_ylabel("Frequency") 
+     
+            #creating bins of 1 K and assigning a temperature to a bin. 
+            #Also, adding this temperaturebin to the datasets.
+            minimum_tair = (min(ds_met.Tair))
+            maximum_tair = (max(ds_met.Tair))
+            bins = np.arange(np.floor(minimum_tair), 
+                             np.ceil(maximum_tair+1)).astype(int)
+            bin_label = np.arange(np.floor(minimum_tair), 
+                                  np.ceil(maximum_tair)).astype(int)
+            data_binned = pd.cut(ds_met.Tair, bins, labels=bin_label)
+            ds_met.loc[:,"tempbin"] = data_binned
+            ds_flux.loc[:, "tempbin"] = data_binned
+            
+            #For each bin, count the amount of measurements and create a 
+            #pandas Dataframe for temperature
+            temp_sorted = ds_met.groupby(['tempbin']).size()
+            dftemp_sorted = pd.DataFrame(temp_sorted)
+            dftemp_sorted.loc[:,"bin_label"]=bin_label
+
+            #LATENT HEAT
+            #filtering out only the measured latent heats
+            ds_met_measuredLH = ds_met[ds_flux.Qle_qc<1]
+            ds_flux_measuredLH = ds_flux[ds_flux.Qle_qc<1]
+            
+            #Ordering the data according to the temperaturebin, making a
+            # pandaframe and equalizing the index to the index
+            #of the temperature dataframe. 
+            ds_flux_measuredLH_sorted = ds_flux_measuredLH.groupby(['tempbin']).size()
+            df_flux_measuredLH_sorted = pd.DataFrame(ds_flux_measuredLH_sorted)
+            dftemp_sorted = dftemp_sorted.set_index(df_flux_measuredLH_sorted.index)
+            measuredLH = df_flux_measuredLH_sorted.iloc[:,0]
+            #adding the measured LH to temperature pandas dataframe
+            dftemp_sorted.loc[:,"measuredLH"]=measuredLH            
+            #for each temperature bin add: the fraction of LH measurements, the 
+            #average temperature of the site, stdev 
+            #of the temperature of the site and the stdev scale. 
+            dftemp_sorted.loc[:,'ratioLH'] = dftemp_sorted['measuredLH']/dftemp_sorted.iloc[:,0]
+            dftemp_sorted.loc[:,"averagetemp"] = mean_tair_measured
+            dftemp_sorted.loc[:,"stdev"] = stdev_tair_measured
+            dftemp_sorted.loc[:,"stdevscale"] = (((dftemp_sorted.loc[:,"bin_label"])-(dftemp_sorted.loc[:,"averagetemp"]))/
+                                                    (dftemp_sorted.loc[:,"stdev"]))
+
+            #SENSIBLE HEAT
+            #filtering out only the measured sensible heats
+            ds_met_measuredSH = ds_met[ds_flux.Qh_qc<1]
+            ds_flux_measuredSH = ds_flux[ds_flux.Qh_qc<1]
+
+            #Ordering the data according to the temperaturebin, making a 
+            #pandaframe and equalizing the index to the index of the temperature dataframe. 
+            ds_flux_measuredSH_sorted = ds_flux_measuredSH.groupby(['tempbin']).size()
+            df_flux_measuredSH_sorted = pd.DataFrame(ds_flux_measuredSH_sorted)
+            dftemp_sorted = dftemp_sorted.set_index(df_flux_measuredSH_sorted.index)
+            measuredSH=df_flux_measuredSH_sorted.iloc[:,0]
+            #adding the measured SH to temperature pandas dataframe and the 
+            #fraction of SH measurements
+            dftemp_sorted.loc[:,"measuredSH"]=measuredSH
+            dftemp_sorted.loc[:,'ratioSH'] = dftemp_sorted['measuredSH']/dftemp_sorted.iloc[:,0]
+            
+            #NEE
+            #filtering out only the measured NEE
+            ds_met_measuredNEE = ds_met[ds_flux.NEE_qc<1]
+            ds_flux_measuredNEE = ds_flux[ds_flux.NEE_qc<1]
+            #Ordering the data according to the temperature bin, making a 
+            #pandaframe and equalizing the index to the index of the temperature dataframe            
+            ds_flux_measuredNEE_sorted = ds_flux_measuredNEE.groupby(['tempbin']).size()
+            df_flux_measuredNEE_sorted = pd.DataFrame(ds_flux_measuredNEE_sorted)
+            dftemp_sorted = dftemp_sorted.set_index(df_flux_measuredNEE_sorted.index)
+            measuredNEE=df_flux_measuredNEE_sorted.iloc[:,0]
+            #adding the measured NEE to temperature pandas dataframe and the fraction of NEE measurements
+            dftemp_sorted.loc[:,"measuredNEE"]=measuredNEE
+            dftemp_sorted.loc[:,'ratioNEE'] = dftemp_sorted['measuredNEE']/dftemp_sorted.iloc[:,0]
+            
+            """
+            #barplot temp distribution with different temperatures
+            list_of_ranges = [
+                            ('fig1b', 270, 275, 421),
+                            ('fig1c', 275, 280, 422),
+                            ('fig1d', 280, 285, 423),
+                            ('fig1e', 285, 290, 424),
+                            ('fig1f', 290, 295, 425),
+                            ('fig1g', 295, 300, 426),
+                            ('fig1h', 300, 9999999, 427)]
+            
+            for (name, minimum, maximum, otherid) in list_of_ranges:
+                if minimum <= ds_met.Tair.mean() < maximum:
+                    ax = fig15.add_subplot(otherid)
+                    dftemp_sorted.plot(y= [0], ax =ax, legend = False)
+                    title_label = "temperature distribution"
+                    if minimum == 0:
+                        title_label = title_label + " <" + str(maximum)
+                    elif maximum == 9999999:
+                        title_label = title_label + " >" + str(minimum)
+                    else:
+                        title_label = title_label + " " + str(minimum) + "-" + str(maximum)
+                    ax.set_title(title_label)
+                    ax.set_xlabel("Temperature")
+                    ax.set_ylabel("Frequency")
+            fig15.tight_layout()
+            #fig1.savefig("LH ratio and temperature stdev.pdf")
+            """      
+            # Working with the energy balance. Only measured SH, LH and Rnet. 
+            # This was done over a long period of time. 
+            ds_flux_energybalance = ds_flux[ds_flux.Qle_qc < 1]
+            ds_flux_energybalance = ds_flux_energybalance[ds_flux.Qh_qc < 1]
+            #not every dataset contained a Rnet.
+            if 'Rnet' in ds_flux_energybalance.columns:
+                ds_flux_energybalance_Rnet = ds_flux_energybalance[ds_flux.Rnet_qc <1]
+                mean_Rnet = ds_flux_energybalance_Rnet.Rnet.mean()
+                mean_LH = ds_flux_energybalance_Rnet.Qle.mean()
+                mean_SH = ds_flux_energybalance_Rnet.Qh.mean()
+                #Calculating the residual energy
+                energybalance = mean_Rnet - mean_LH - mean_SH
+            
+            #only include temperature bins with >10 temperature measurements 
+            dftemp_sorted = dftemp_sorted[dftemp_sorted[0]>10]
+            
+            #plot with Ratio of latent heat measurements plot of all sites, with a stdev
+            #scale on the x-axis
+            ax = fig10.add_subplot(111)
+            ax.plot(dftemp_sorted.loc[:,"stdevscale"],dftemp_sorted.loc[:,'ratioLH'])
+            ax.set_title("Latent heat measurements ratio")
+            ax.set_xlabel("Temperature stdev")
+            ax.set_ylabel("Ratio")
+            
+            #plot with ratio of sensible heat measurements plot of all sites, with a stdev 
+            #scale on the x-axis
+            ax = fig11.add_subplot(111)
+            ax.plot(dftemp_sorted.loc[:,"stdevscale"],dftemp_sorted.loc[:,'ratioSH'])
+            ax.set_title("Sensible heat measurements ratio")
+            ax.set_xlabel("Temperature stdev")
+            ax.set_ylabel("Ratio")
+            
+            #plot with ratio of NEE measurements plot of all sites, with a stdev scale on 
+            #the x-axis
+            ax = fig12.add_subplot(111)
+            ax.plot(dftemp_sorted.loc[:,"stdevscale"],dftemp_sorted.loc[:,'ratioNEE'])
+            ax.set_title("NEE measurements ratio")
+            ax.set_xlabel("Temperature stdev")
+            ax.set_ylabel("Ratio")
+                       
+            
+            #dividing data in different sections for LH, SH and NEE 
+            # average ratio (LH, SH, NEE measurements) for all temperatures
+            ratioLH_overall_mean = (dftemp_sorted.measuredLH.sum()/dftemp_sorted[0].sum()).round(2)      
+            ratioSH_overall_mean = (dftemp_sorted.measuredSH.sum()/dftemp_sorted[0].sum()).round(2)
+            if dftemp_sorted.measuredNEE.sum()>1:
+                ratioNEE_overall_mean = (dftemp_sorted.measuredNEE.sum()/dftemp_sorted[0].sum()).round(2)
+            else: 
+                ratioNEE_overall_mean = np.nan
+            #average ratio (LH, SH, NEE measurements) if temperature is < mean 
+            smallerthan_mean = dftemp_sorted[dftemp_sorted.stdevscale<0]
+            ratioLH_smallerthan_mean = (smallerthan_mean.measuredLH.sum()/smallerthan_mean[0].sum()).round(2) 
+            ratioSH_smallerthan_mean = (smallerthan_mean.measuredSH.sum()/smallerthan_mean[0].sum()).round(2)
+            if dftemp_sorted.measuredNEE.sum()>1:
+                ratioNEE_smallerthan_mean = (smallerthan_mean.measuredNEE.sum()/smallerthan_mean[0].sum()).round(2) 
+            else:
+                ratioNEE_smallerthan_mean = np.nan
+            #average ratio (LH, SH, NEE measurements) if temperature is > mean 
+            largerthan_mean = dftemp_sorted[dftemp_sorted.stdevscale>0]
+            ratioLH_largerthan_mean = (largerthan_mean.measuredLH.sum()/largerthan_mean[0].sum()).round(2) 
+            ratioSH_largerthan_mean = (largerthan_mean.measuredSH.sum()/largerthan_mean[0].sum()).round(2) 
+            if dftemp_sorted.measuredNEE.sum()>1:
+                ratioNEE_largerthan_mean = (largerthan_mean.measuredNEE.sum()/largerthan_mean[0].sum()).round(2)
+            else:
+                ratioNEE_largerthan_mean = np.nan
+            #average ratio (LH, SH, NEE measurements) if temperature withing 1 stdev from the mean
+            within1_stdev_mean = dftemp_sorted[(dftemp_sorted['stdevscale']<1) & (dftemp_sorted['stdevscale'] >-1)]
+            ratioLH_within1_stdev_mean = (within1_stdev_mean.measuredLH.sum()/within1_stdev_mean[0].sum()).round(2) 
+            ratioSH_within1_stdev_mean = (within1_stdev_mean.measuredSH.sum()/within1_stdev_mean[0].sum()).round(2)
+            if dftemp_sorted.measuredNEE.sum()>1:
+                ratioNEE_within1_stdev_mean = (within1_stdev_mean.measuredNEE.sum()/within1_stdev_mean[0].sum()).round(2)
+            else:
+                ratioNEE_within1_stdev_mean = np.nan               
+            #average ratio (LH, SH, NEE measurements) if temperature is > 1stdev away from the mean
+            largerthan1_stdev_mean = dftemp_sorted[(dftemp_sorted['stdevscale'] > 1)]
+            ratioLH_largerthan1_stdev_mean = (largerthan1_stdev_mean.measuredLH.sum()/largerthan1_stdev_mean[0].sum()).round(2) 
+            ratioSH_largerthan1_stdev_mean = (largerthan1_stdev_mean.measuredSH.sum()/largerthan1_stdev_mean[0].sum()).round(2) 
+            if dftemp_sorted.measuredNEE.sum()>1:
+                ratioNEE_largerthan1_stdev_mean = (largerthan1_stdev_mean.measuredNEE.sum()/largerthan1_stdev_mean[0].sum()).round(2)
+            else:
+                ratioNEE_largerthan1_stdev_mean = np.nan
+            #average ratio (LH, SH, NEE measurements) if temperature is < 1stdev away from the mean
+            smallerthan1_stdev_mean = dftemp_sorted[(dftemp_sorted['stdevscale'] < -1)]
+            ratioLH_smallerthan1_stdev_mean = (smallerthan1_stdev_mean.measuredLH.sum()/smallerthan1_stdev_mean[0].sum()).round(2) 
+            ratioSH_smallerthan1_stdev_mean = (smallerthan1_stdev_mean.measuredSH.sum()/smallerthan1_stdev_mean[0].sum()).round(2) 
+            if dftemp_sorted.measuredNEE.sum()>1:
+                ratioNEE_smallerthan1_stdev_mean = (smallerthan1_stdev_mean.measuredNEE.sum()/smallerthan1_stdev_mean[0].sum()).round(2)
+            else:
+                ratioNEE_smallerthan1_stdev_mean =np.nan
+            #average ratio (LH, SH, NEE measurements) if temperature is > 2stdev away from the mean. Not all sites 
+            #contain measurements in this bin. Therefore, this if-statement was created. 
+            largerthan2_stdev_mean = dftemp_sorted[(dftemp_sorted['stdevscale'] > 2)]
+            if len(largerthan2_stdev_mean) > 1:
+                ratioLH_largerthan2_stdev_mean = (largerthan2_stdev_mean.measuredLH.sum()/largerthan2_stdev_mean[0].sum()).round(2) 
+                ratioSH_largerthan2_stdev_mean = (largerthan2_stdev_mean.measuredSH.sum()/largerthan2_stdev_mean[0].sum()).round(2) 
+                if dftemp_sorted.measuredNEE.sum()>1:
+                    ratioNEE_largerthan2_stdev_mean = (largerthan2_stdev_mean.measuredNEE.sum()/largerthan2_stdev_mean[0].sum()).round(2)
+                else:
+                    ratioNEE_largerthan2_stdev_mean = np.nan
+            elif len(largerthan2_stdev_mean) == 0:
+                ratioLH_largerthan2_stdev_mean = np.nan
+                ratioSH_largerthan2_stdev_mean = np.nan
+                ratioNEE_largerthan2_stdev_mean = np.nan
+            #average ratio (LH, SH, NEE measurements) if temperature is < 2stdev away from the mean         
+            smallerthan2_stdev_mean = dftemp_sorted[(dftemp_sorted['stdevscale'] < -2)]
+            if len(smallerthan2_stdev_mean)>1:  
+                ratioLH_smallerthan2_stdev_mean = (smallerthan2_stdev_mean.measuredLH.sum()/smallerthan2_stdev_mean[0].sum()).round(2) 
+                ratioSH_smallerthan2_stdev_mean = (smallerthan2_stdev_mean.measuredSH.sum()/smallerthan2_stdev_mean[0].sum()).round(2) 
+                if dftemp_sorted.measuredNEE.sum()>1:
+                    ratioNEE_smallerthan2_stdev_mean = (smallerthan2_stdev_mean.measuredNEE.sum()/smallerthan2_stdev_mean[0].sum()).round(2)
+                else:
+                    ratioNEE_smallerthan2_stdev_mean = np.nan
+            elif len(largerthan2_stdev_mean) == 0:
+                ratioLH_largerthan2_stdev_mean = np.nan
+                ratioSH_largerthan2_stdev_mean = np.nan
+                ratioNEE_largerthan2_stdev_mean = np.nan
+                
+            #shorten the filename to first 6 letters, which is the abberviation for the site
+            mname = os.path.splitext(os.path.basename(m))[0]
+            mname=mname[0:6]
+            
+            #colours for the scatterplot
+            if mean_tair_measured >= 295:
+                color1 = 'Firebrick'
+            elif mean_tair_measured <275:
+                color1 = 'blue'
+            else:
+                color1 = 'black'
+                
+            #Changing markers for different PGBs:   
+            decoded = ds_met['IGBP_veg_long'].str.decode("utf-8")
+            decoded = str(decoded[0]).strip()
+            
+ 
+                #Adding the divisions to the empty lists
+            resultsLH.append([mname, mean_tair_measured,  Mean_precipitation_measured_yearly, ratioLH_overall_mean, ratioLH_smallerthan_mean, ratioLH_largerthan_mean,
+                              ratioLH_within1_stdev_mean, ratioLH_smallerthan1_stdev_mean, ratioLH_largerthan1_stdev_mean,
+                              ratioLH_smallerthan2_stdev_mean, ratioLH_largerthan2_stdev_mean, color1, energybalance, decoded]) 
+            resultsSH.append([mname, mean_tair_measured, Mean_precipitation_measured_yearly, ratioSH_overall_mean, ratioSH_smallerthan_mean, ratioSH_largerthan_mean,
+                              ratioSH_within1_stdev_mean, ratioSH_smallerthan1_stdev_mean, ratioSH_largerthan1_stdev_mean,
+                              ratioSH_smallerthan2_stdev_mean, ratioSH_largerthan2_stdev_mean, color1, energybalance]) 
+            resultsNEE.append([mname, mean_tair_measured, Mean_precipitation_measured_yearly,  ratioNEE_overall_mean, ratioNEE_smallerthan_mean, ratioNEE_largerthan_mean,
+                              ratioNEE_within1_stdev_mean, ratioNEE_smallerthan1_stdev_mean, ratioNEE_largerthan1_stdev_mean,
+                              ratioNEE_smallerthan2_stdev_mean, ratioNEE_largerthan2_stdev_mean, color1, energybalance])  
+    
+                        
+                #Making pandas dataframes
+            df_resultsLH = pd.DataFrame(resultsLH)
+            df_resultsSH = pd.DataFrame(resultsSH)
+            df_resultsNEE = pd.DataFrame(resultsNEE)
+            
+                #adding names to columns of dataframes
+            df_resultsLH.columns = ['site', 'meantemp', 'meanprec',   'overall', 'smallerthanmean', 'largerthanmean', 'within1stdev', 'smallerthan1stdev',
+                            'largerthan1stdev', 'smallerthan2stdev', 'largerthan2stdev', 'color', 'energybalance', 'decoded']
+            df_resultsSH.columns = ['site', 'meantemp', 'meanprec', 'overall', 'smallerthanmean', 'largerthanmean', 'within1stdev', 'smallerthan1stdev',
+                            'largerthan1stdev', 'smallerthan2stdev', 'largerthan2stdev', 'color', 'energybalance']
+            df_resultsNEE.columns = ['site', 'meantemp', 'meanprec',  'overall', 'smallerthanmean', 'largerthanmean', 'within1stdev', 'smallerthan1stdev',
+                            'largerthan1stdev', 'smallerthan2stdev', 'largerthan2stdev', 'color', 'energybalance']
+            
+
+                
+                # creating scatterplots for temperatures below mean vs temperatures above mean. For LH, SH and NEE.
+            ax = fig13.add_subplot(321)
+            ax.scatter(df_resultsLH.smallerthanmean, df_resultsLH.largerthanmean, color = df_resultsLH.color)
+            ax.plot( [0,1],[0,1] )
+            ax.set_xlabel('temperatures below mean')
+            ax.set_ylabel('temperatures above mean')
+            ax.set_title ('LH above mean vs below mean')
+            red_patch = mpatches.Circle((0, 0), color='Firebrick', label='mean annual temperature > 22')
+            blue_patch = mpatches.Circle((0, 0), radius = 0.25, color='blue', label='mean temperature < 2')
+            ax.legend(handles=[blue_patch, red_patch])
+            ax = fig13.add_subplot(323)
+            ax.scatter(df_resultsSH.smallerthanmean, df_resultsSH.largerthanmean, color = df_resultsSH.color)
+            ax.plot( [0,1],[0,1] )
+            ax.set_xlabel('temperatures below mean')
+            ax.set_ylabel('temperatures above mean')
+            ax.set_title('SH above mean vs below mean')
+            red_patch = mpatches.Circle((0, 0), color='Firebrick', label='mean annual temperature > 22')
+            blue_patch = mpatches.Circle((0, 0), radius = 0.25, color='blue', label='mean temperature < 2')
+            ax.legend(handles=[blue_patch, red_patch])         
+            ax = fig13.add_subplot(325)
+            ax.scatter(df_resultsNEE.smallerthanmean, df_resultsNEE.largerthanmean, color = df_resultsNEE.color)
+            ax.plot( [0,1],[0,1] )
+            ax.set_xlabel('temperatures below mean')
+            ax.set_ylabel('temperatures above mean')
+            ax.set_title('NEE above mean vs below mean') 
+            red_patch = mpatches.Circle((0, 0), color='Firebrick', label='mean annual temperature > 22')
+            blue_patch = mpatches.Circle((0, 0), radius = 0.25, color='blue', label='mean temperature < 2')
+            ax.legend(handles=[blue_patch, red_patch])
+                # creating scatterplots for temperatures below -2stedev and above +2stdev the mean. For LH, SH and NEE.
+            ax = fig13.add_subplot(322)
+            ax.scatter(df_resultsLH.smallerthan2stdev, df_resultsLH.largerthan2stdev, color = df_resultsLH.color)
+            ax.plot( [0,1],[0,1] )
+            ax.set_xlabel('lower 2% temperatures')
+            ax.set_ylabel('upper 2% temperatures')
+            ax.set_title ('LH lower tail vs upper tail')
+            red_patch = mpatches.Circle((0, 0), color='Firebrick', label='mean annual temperature > 22')
+            blue_patch = mpatches.Circle((0, 0), radius = 0.25, color='blue', label='mean temperature < 2')
+            ax.legend(handles=[blue_patch, red_patch])
+            ax = fig13.add_subplot(324)
+            ax.scatter(df_resultsSH.smallerthan2stdev, df_resultsSH.largerthan2stdev, color = df_resultsSH.color)
+            ax.plot( [0,1],[0,1] )
+            ax.set_xlabel('lower 2% temperatures')
+            ax.set_ylabel('upper 2% temperatures')
+            ax.set_title('SH lower tail vs upper tail')
+            red_patch = mpatches.Circle((0, 0), color='Firebrick', label='mean annual temperature > 22')
+            blue_patch = mpatches.Circle((0, 0), radius = 0.25, color='blue', label='mean temperature < 2')
+            ax.legend(handles=[blue_patch, red_patch])
+            ax = fig13.add_subplot(326)
+            ax.scatter(df_resultsNEE.smallerthan2stdev, df_resultsNEE.largerthan2stdev, color = df_resultsNEE.color)
+            ax.plot( [0,1],[0,1] )
+            ax.set_xlabel('lower 2% temperatures')
+            ax.set_ylabel('upper 2% temperatures')
+            ax.set_title('NEE lower tail vs upper tail') 
+            red_patch = mpatches.Circle((0, 0), color='Firebrick', label='mean annual temperature > 22')
+            blue_patch = mpatches.Circle((0, 0), radius = 0.25, color='blue', label='mean temperature < 2')
+            ax.legend(handles=[blue_patch, red_patch])
+            
+            #latitudes and longitudes
+            lat = ds_met['latitude'].mean()
+            lon = ds_met['longitude'].mean()
+            lats.append(lat)
+            lons.append(lon)
+            vals = df_resultsNEE.overall
+             
+              
+#precipitation-temperature plots
+#overall performance LH, SH, NEE
+fig, ax = plt.subplots(nrows=3, ncols=3, figsize =(15,20))
+plt.title("Temperature-precipitation measurement ratio plots")
+prectemp(df_resultsLH.meantemp-273, df_resultsLH.meanprec, df_resultsLH.overall, 
+         "LH ratio overall ",  ax[0,0], df_resultsLH.decoded)
+prectemp(df_resultsSH.meantemp-273, df_resultsSH.meanprec, df_resultsSH.overall, 
+         "SH ratio overall ",  ax[1,0], df_resultsLH.decoded)
+prectemp(df_resultsNEE.meantemp-273, df_resultsNEE.meanprec, df_resultsNEE.overall, 
+         "NEE ratio overall ",  ax[2,0], df_resultsLH.decoded)
+#above 2 stdev performance LH, SH, NEE
+prectemp(df_resultsLH.meantemp-273, df_resultsLH.meanprec, df_resultsLH.largerthan2stdev, 
+         "LH ratio upper 2.2 % temperatures", ax[0,1], df_resultsLH.decoded)
+prectemp(df_resultsSH.meantemp-273, df_resultsSH.meanprec, df_resultsSH.largerthan2stdev, 
+         "SH ratio upper 2.2 % temperatures", ax[1,1],df_resultsLH.decoded)
+prectemp(df_resultsNEE.meantemp-273, df_resultsNEE.meanprec, df_resultsNEE.largerthan2stdev, 
+         "NEE ratio upper 2.2 % temperatures", ax[2,1], df_resultsLH.decoded)
+#below 2 stdev performance LH, SH, NEE
+prectemp((df_resultsLH.meantemp-273), df_resultsLH.meanprec, df_resultsLH.smallerthan2stdev, 
+         "LH ratio lower 2.2 % temperatures", ax[0,2], df_resultsLH.decoded)
+prectemp(df_resultsSH.meantemp-273, df_resultsSH.meanprec, df_resultsSH.smallerthan2stdev, 
+         "SH ratio lower 2.2 % temperatures", ax[1,2], df_resultsLH.decoded)
+prectemp(df_resultsNEE.meantemp-273, df_resultsNEE.meanprec, df_resultsNEE.smallerthan2stdev, 
+         "NEE ratio lower 2.2 % temperatures", ax[2,2], df_resultsLH.decoded)
+     
+# creating baseplots with zoom  
+#overall performance LH, SH, NEE
+p1 = zoommap(df_resultsLH.overall, "Overall LH measurement ratio")
+p2 = zoommap(df_resultsSH.overall, "Overall SH measurement ratio")
+p3 = zoommap(df_resultsNEE.overall, "Overall NEE measurement ratio")
+#above 2 stdev performance LH, SH, NEE
+p4 = zoommap(df_resultsLH.largerthan2stdev, "LH measurement ratio for the upper 2.2 % temperatures")
+p5 = zoommap(df_resultsSH.largerthan2stdev, "SH measurement ratio for the upper 2.2 % temperatures")
+p6 = zoommap(df_resultsNEE.largerthan2stdev, "NEE measurement ratio for the upper 2.2 % temperatures")
+#below 2 stdev performance LH, SH, NEE
+p7 = zoommap(df_resultsLH.smallerthan2stdev, "LH measurement ratio for the lower 2.2 % temperatures")
+p8 = zoommap(df_resultsSH.smallerthan2stdev, "SH measurement ratio for the lower 2.2 % temperatures")
+p9 = zoommap(df_resultsNEE.smallerthan2stdev, "NEE measurement ratio for the lower 2.2 % temperatures")
+
+"""   
+# scatterplot on quality control vs. energybalance closure overall performance
+fig, ax = plt.subplots(nrows = 3, ncols = 3, figsize = (12,16))
+ax[0,0].scatter(df_resultsLH.overall, df_resultsLH.energybalance)
+ax[0,0].set_title("LH overall")
+ax[0,0].set_xlabel("performance LH measurement")
+ax[0,0].set_ylabel("residual energy (W/m2)")
+ax[1,0].scatter (df_resultsSH.overall, df_resultsSH.energybalance)
+ax[1,0].set_title("SH overall")
+ax[1,0].set_xlabel("performance LH measurement")
+ax[1,0].set_ylabel("residual energy (W/m2)")
+ax[2,0].scatter (df_resultsNEE.overall, df_resultsNEE.energybalance)
+ax[2,0].set_title("NEE overall")
+ax[2,0].set_xlabel("performance LH measurement")
+ax[2,0].set_ylabel("residual energy (W/m2)")
+
+
+#scatterplot on quality control vs. energybalance closure above 2 stdev performance
+ax[0,1].scatter(df_resultsLH.largerthan2stdev, df_resultsLH.energybalance)
+ax[0,1].set_title("LH above 2 stdev from the mean")
+ax[0,1].set_xlabel("performance LH measurement")
+ax[0,1].set_ylabel("residual energy (W/m2)")
+ax[1,1].scatter (df_resultsSH.largerthan2stdev, df_resultsSH.energybalance)
+ax[1,1].set_title("SH above 2 stdev from the mean")
+ax[1,1].set_xlabel("performance LH measurement")
+ax[1,1].set_ylabel("residual energy (W/m2)")
+ax[2,1].scatter (df_resultsNEE.largerthan2stdev, df_resultsNEE.energybalance)
+ax[2,1].set_title("NEE above 2 stdev from the mean")
+ax[2,1].set_xlabel("performance LH measurement")
+ax[2,1].set_ylabel("residual energy (W/m2)")
+
+
+#scatterplot on quality control vs. energybalance closure below 2 stdev performance
+ax[0,2].scatter(df_resultsLH.smallerthan2stdev, df_resultsLH.energybalance)
+ax[0,2].set_title("LH below 2 stdev from the mean")
+ax[0,2].set_xlabel("performance LH measurement")
+ax[0,2].set_ylabel("residual energy (W/m2)")
+ax[1,2].scatter (df_resultsSH.smallerthan2stdev, df_resultsSH.energybalance)
+ax[1,2].set_title("SH below 2 stdev from the mean")
+ax[1,2].set_xlabel("performance LH measurement")
+ax[1,2].set_ylabel("residual energy (W/m2)")
+ax[2,2].scatter (df_resultsNEE.smallerthan2stdev, df_resultsNEE.energybalance)
+ax[2,2].set_title("NEE below 2 stdev from the mean")
+ax[2,2].set_xlabel("performance LH measurement")
+ax[2,2].set_ylabel("residual energy (W/m2)")
+plt.show()
+"""
+
+ 
+#USE THIS PIECE OF CODE TO PRODUCE TABLES WITH COLOURCODE    
+#making tabels for the different divisions in temperature and corresponding ratios in LH, SH and NEE measurements. 
+#Furthermore, colourcodes are used to give values a colour on the ratio (green = high ratio, red=low ratio). 
+#The formula at the beginning of the script is used for this. 
+#LH    
+tableLH = go.Table(
+        columnwidth = [10],
+        header = dict(values=['site', 'overall', 'smaller than mean', 'larger than mean', 'within 1 stdev', 
+                              'smaller than 1stdev', 'larger than 1 stdev', 'smaller than 2 stdev', 'larger than 2 stdev']),
+        cells = dict(values=[df_resultsLH['site'], df_resultsLH['overall'], df_resultsLH['smallerthanmean'], df_resultsLH['largerthanmean'], 
+                             df_resultsLH['within1stdev'], df_resultsLH['smallerthan1stdev'], df_resultsLH['largerthan1stdev'], 
+                             df_resultsLH['smallerthan2stdev'], df_resultsLH['largerthan2stdev']],
+        fill = dict(color=['rgb(245,245,245)',
+                           [color(val) for val in df_resultsLH.overall],
+                           [color (val) for val in df_resultsLH.smallerthanmean],
+                           [color(val) for val in df_resultsLH.largerthanmean],
+                           [color(val) for val in df_resultsLH.within1stdev],
+                           [color(val) for val in df_resultsLH.smallerthan1stdev],
+                           [color(val) for val in df_resultsLH.largerthan1stdev],
+                           [color(val) for val in df_resultsLH.smallerthan2stdev],
+                           [color(val) for val in df_resultsLH.largerthan2stdev]] )))
+layout = dict(title = "LH", width=600)                    
+data = [tableLH]
+fig = dict(data=data, layout=layout)
+#py.iplot(fig, filename = "LH table")
+
+#SH
+tableSH = go.Table(
+        columnwidth = [10],
+        header = dict(values=['site', 'overall', 'smaller than mean', 'larger than mean', 'within 1 stdev', 
+                              'smaller than1stdev', 'larger than 1 stdev', 'smaller than 2 stdev', 'larger than 2 stdev']),
+        cells = dict(values=[df_resultsSH['site'], df_resultsSH['overall'], df_resultsSH['smallerthanmean'], df_resultsSH['largerthanmean'], 
+                             df_resultsSH['within1stdev'], df_resultsSH['smallerthan1stdev'], df_resultsSH['largerthan1stdev'], 
+                             df_resultsSH['smallerthan2stdev'], df_resultsSH['largerthan2stdev']],
+        fill = dict(color=['rgb(245,245,245)',
+                           [color(val) for val in df_resultsSH.overall],
+                           [color (val) for val in df_resultsSH.smallerthanmean],
+                           [color(val) for val in df_resultsSH.largerthanmean],
+                           [color(val) for val in df_resultsSH.within1stdev],
+                           [color(val) for val in df_resultsSH.smallerthan1stdev],
+                           [color(val) for val in df_resultsSH.largerthan1stdev],
+                           [color(val) for val in df_resultsSH.smallerthan2stdev],
+                           [color(val) for val in df_resultsSH.largerthan2stdev]] )))
+layout = dict(title = "SH", width=600)                    
+data = [tableSH]
+fig = dict(data=data, layout=layout)
+#py.iplot(fig, filename = "SH table")
+
+#NEE
+tableNEE = go.Table(
+        columnwidth = [10],
+        header = dict(values=['site', 'overall', 'smaller than mean', 'larger than mean', 'within 1 stdev', 
+                              'smaller than 1stdev', 'larger than 1 stdev', 'smaller than 2 stdev', 'larger than 2 stdev']),
+        cells = dict(values=[df_resultsNEE['site'], df_resultsNEE['overall'], df_resultsNEE['smallerthanmean'], df_resultsNEE['largerthanmean'], 
+                             df_resultsNEE['within1stdev'], df_resultsNEE['smallerthan1stdev'],df_resultsNEE['largerthan1stdev'],
+                             df_resultsNEE['smallerthan2stdev'], df_resultsNEE['largerthan2stdev']],
+        fill = dict(color=['rgb(245,245,245)',
+                           [color(val) for val in df_resultsNEE.overall],
+                           [color (val) for val in df_resultsNEE.smallerthanmean],
+                           [color(val) for val in df_resultsNEE.largerthanmean],
+                           [color(val) for val in df_resultsNEE.within1stdev],
+                           [color(val) for val in df_resultsNEE.smallerthan1stdev],
+                           [color(val) for val in df_resultsNEE.largerthan1stdev],
+                           [color(val) for val in df_resultsNEE.smallerthan2stdev],
+                           [color(val) for val in df_resultsNEE.largerthan2stdev]] )))
+layout = dict(title = "NEE", width=600)                    
+data = [tableNEE]
+fig = dict(data=data, layout=layout)
+#py.iplot(fig, filename = "NEE table")
+
+
+ 
+#USE THIS PIECE OF CODE TO MAKE RATIO OF LH, SH and NEE measurement PLOTS WITH STDEV ON THE X-AXIS 
+#DIFFERENTIATE BETWEEN MEAN TEMPERATURE, PRECIPITATION AND VEGETATION.
+"""
+                #Latent heat measurement plots with different site mean temperatures  categories
+            list_of_ranges = [
+                            ('fig1b', 270, 275, 421),
+                            ('fig1c', 275, 280, 422),
+                            ('fig1d', 280, 285, 423),
+                            ('fig1e', 285, 290, 424),
+                            ('fig1f', 290, 295, 425),
+                            ('fig1g', 295, 300, 426),
+                            ('fig1h', 300, 9999999, 427)]       
+                       
+            for (name, minimum, maximum, otherid) in list_of_ranges:
+                if minimum <= ds_met.Tair.mean() < maximum:
+                    ax = fig1.add_subplot(otherid)
+                    ax.plot(dftemp_sorted.loc[:,"stdevscale"],dftemp_sorted.loc[:,'percentageLH'])
+                    title_label = "ratio LH Tair"
+                    if minimum == 0:
+                        title_label = title_label + " <" + str(maximum)
+                    elif maximum == 9999999:
+                        title_label = title_label + " >" + str(minimum)
+                    else:
+                        title_label = title_label + " " + str(minimum) + "-" + str(maximum)
+                    ax.set_title(title_label)
+                    ax.set_xlabel("temperature stdev")
+                    ax.set_ylabel("ratio")
+            fig1.tight_layout()
+            fig1.savefig("LH ratio and temperature stdev.pdf")
+            
+            #Latent heat measurement plots with different site mean precipitation categories
+            list_of_ranges = [
+                            ('fig4a', 0, 0.2, 421),
+                            ('fig4b', 0.2, 0.4, 422),
+                            ('fig4c', 0.4, 0.6, 423),
+                            ('fig4d', 0.6, 0.8, 424),
+                            ('fig4e', 0.8, 1.0, 425),
+                            ('fig4f', 1.0, 1.2, 426),
+                            ('fig4g', 1.2, 1.4, 427),
+                            ('fig4h', 1.4, 9999999, 428)] 
+                    
+            for (name, minimum, maximum, otherid) in list_of_ranges:
+                if minimum <= mean_precipitation_yearly < maximum:
+                    ax = fig2.add_subplot(otherid)
+                    ax.plot(dftemp_sorted.loc[:,"stdevscale"],dftemp_sorted.loc[:,'percentageLH'])
+                    title_label = "ratio LH precipitation"
+                    if minimum == 0:
+                        title_label = title_label + " <" + str(maximum)
+                    elif maximum == 9999999:
+                        title_label = title_label + " >" + str(minimum)
+                    else:
+                        title_label = title_label + " " + str(minimum) + "-" + str(maximum)
+                    ax.set_title(title_label)
+                    ax.set_xlabel("temperature stdev")
+                    ax.set_ylabel("ratio")   
+            fig2.tight_layout()
+            fig2.savefig("LH ratio and precipitation stdev.pdf")
+            
+                #Latent heat measurement plots with different site vegetation categories
+            list_of_ranges = [
+                            ('fig7a', "Savannas", 7,2,1),
+                            ('fig7b', "Evergreen Needleleaf Forests",7,2,2),
+                            ('fig7c', "Cropland/Natural Vegetation Mosaic",7,2,3),
+                            ('fig7d', "Evergreen Broadleaf Forests",7,2,4),
+                            ('fig7e', "Deciduous Broadleaf Forests",7,2,5),
+                            ('fig7f', "Grasslands",7,2,6),
+                            ('fig7g', "Open Shrublands",7,2,7),
+                            ('fig7h', "Permanent Wetlands",7,2,8),
+                            ('fig7i', "Croplands",7,2,9),
+                            ('fig7j', "Mixed Forests",7,2,10),
+                            ('fig7k', "Woody Savannas",7,2,11),
+                            ('fig7l', "Closed Shrublands",7,2,12),
+                            ('fig7m', "Snow and Ice",7,2,13)]
+                            
+            decoded = ds_met['IGBP_veg_long'].str.decode("utf-8")
+                        
+            for (name, vegetation, left, right,number) in list_of_ranges:
+                if str(decoded[0]).strip() == vegetation:
+                    ax = fig3.add_subplot(left, right, number)
+                    ax.plot(dftemp_sorted.loc[:,"stdevscale"],dftemp_sorted.loc[:,'percentageLH'])
+                    title_label = "ratio LH vegetation" + " " + str(vegetation)
+                    ax.set_title(title_label)
+                    ax.set_xlabel("temperature stdev")
+                    ax.set_ylabel("ratio") 
+            fig3.tight_layout()    
+            fig3.savefig("LH ratio and vegetation stdev.pdf")    
+                                          
+                # Sensible heat measurement plots with different site mean temperature categories
+            list_of_ranges = [
+                            
+                            ('fig1b', 270, 275, 421),
+                            ('fig1c', 275, 280, 422),
+                            ('fig1d', 280, 285, 423),
+                            ('fig1e', 285, 290, 424),
+                            ('fig1f', 290, 295, 425),
+                            ('fig1g', 295, 300, 426),
+                            ('fig1h', 300, 9999999, 427)]       
+            
+            for (name, minimum, maximum, otherid) in list_of_ranges:
+                if minimum <= ds_met.Tair.mean() < maximum:
+                    ax = fig4.add_subplot(otherid)
+                    ax.plot(dftemp_sorted.loc[:,"stdevscale"],dftemp_sorted.loc[:,'percentageSH'])
+                    title_label = "ratio SH Tair"
+                    if minimum == 0:
+                        title_label = title_label + " <" + str(maximum)
+                    elif maximum == 9999999:
+                        title_label = title_label + " >" + str(minimum)
+                    else:
+                        title_label = title_label + " " + str(minimum) + "-" + str(maximum)
+                    ax.set_title(title_label)
+                    ax.set_xlabel("temperature stdev")
+                    ax.set_ylabel("ratio")
+            fig4.tight_layout()
+            fig4.savefig("SH ratio and temperature stdev.pdf") 
+            
+                # Sensible heat measurement plots with different site mean precipitation categories
+            list_of_ranges = [
+                            ('fig4a', 0, 0.2, 421),
+                            ('fig4b', 0.2, 0.4, 422),
+                            ('fig4c', 0.4, 0.6, 423),
+                            ('fig4d', 0.6, 0.8, 424),
+                            ('fig4e', 0.8, 1.0, 425),
+                            ('fig4f', 1.0, 1.2, 426),
+                            ('fig4g', 1.2, 1.4, 427),
+                            ('fig4h', 1.4, 9999999, 428)] 
+                    
+            for (name, minimum, maximum, otherid) in list_of_ranges:
+                if minimum <= mean_precipitation_yearly < maximum:
+                    ax = fig5.add_subplot(otherid)
+                    ax.plot(dftemp_sorted.loc[:,"stdevscale"],dftemp_sorted.loc[:,'percentageSH'])
+                    title_label = "ratio SH precipitation"
+                    if minimum == 0:
+                        title_label = title_label + " <" + str(maximum)
+                    elif maximum == 9999999:
+                        title_label = title_label + " >" + str(minimum)
+                    else:
+                        title_label = title_label + " " + str(minimum) + "-" + str(maximum)
+                    ax.set_title(title_label)
+                    ax.set_xlabel("temperature stdev")
+                    ax.set_ylabel("ratio") 
+            fig5.tight_layout()        
+            fig5.savefig("SH ratio and precipitation stdev.pdf")
+
+                # Sensible heat measurement plots with different site vegetation
+            list_of_ranges = [
+                            ('fig7a', "Savannas", 7,2,1),
+                            ('fig7b', "Evergreen Needleleaf Forests",7,2,2),
+                            ('fig7c', "Cropland/Natural Vegetation Mosaic",7,2,3),
+                            ('fig7d', "Evergreen Broadleaf Forests",7,2,4),
+                            ('fig7e', "Deciduous Broadleaf Forests",7,2,5),
+                            ('fig7f', "Grasslands",7,2,6),
+                            ('fig7g', "Open Shrublands",7,2,7),
+                            ('fig7h', "Permanent Wetlands",7,2,8),
+                            ('fig7i', "Croplands",7,2,9),
+                            ('fig7j', "Mixed Forests",7,2,10),
+                            ('fig7k', "Woody Savannas",7,2,11),
+                            ('fig7l', "Closed Shrublands",7,2,12),
+                            ('fig7m', "Snow and Ice",7,2,13)]
+            
+            for (name, vegetation, left, right, number) in list_of_ranges:
+                if str(decoded[0]).strip() == vegetation:
+                    ax = fig6.add_subplot(left,right,number)
+                    ax.plot(dftemp_sorted.loc[:,"stdevscale"],dftemp_sorted.loc[:,'percentageSH'])
+                    title_label = "ratio SH vegetation" + " " + str(vegetation)
+                    ax.set_title(title_label)
+                    ax.set_xlabel("temperature stdev")
+                    ax.set_ylabel("ratio") 
+            fig6.tight_layout()
+            fig6.savefig("SH ratio and vegetation stdev.pdf")
+                                  
+                # NEE measurement plots with different site mean temperature categories
+            list_of_ranges = [                            
+                            ('fig1b', 270, 275, 421),
+                            ('fig1c', 275, 280, 422),
+                            ('fig1d', 280, 285, 423),
+                            ('fig1e', 285, 290, 424),
+                            ('fig1f', 290, 295, 425),
+                            ('fig1g', 295, 300, 426),
+                            ('fig1h', 300, 9999999, 427)]      
+            
+            for (name, minimum, maximum, otherid) in list_of_ranges:
+                if minimum <= ds_met.Tair.mean() < maximum:
+                    ax = fig7.add_subplot(otherid)
+                    ax.plot(dftemp_sorted.loc[:,"stdevscale"],dftemp_sorted.loc[:,'percentageNEE'])
+                    title_label = "ratio NEE Tair"
+                    if minimum == 0:
+                        title_label = title_label + " <" + str(maximum)
+                    elif maximum == 9999999:
+                        title_label = title_label + " >" + str(minimum)
+                    else:
+                        title_label = title_label + " " + str(minimum) + "-" + str(maximum)
+                    ax.set_title(title_label)
+                    ax.set_xlabel("temperature stdev")
+                    ax.set_ylabel("ratio")   
+            fig7.tight_layout()
+            fig7.savefig("NEE ratio and temperature stdev.pdf")
+            
+                # NEE measurement plots with different site mean precipitation categories
+            list_of_ranges = [
+                            ('fig4a', 0, 0.2, 421),
+                            ('fig4b', 0.2, 0.4, 422),
+                            ('fig4c', 0.4, 0.6, 423),
+                            ('fig4d', 0.6, 0.8, 424),
+                            ('fig4e', 0.8, 1.0, 425),
+                            ('fig4f', 1.0, 1.2, 426),
+                            ('fig4g', 1.2, 1.4, 427),
+                            ('fig4h', 1.4, 9999999, 428)] 
+                    
+            for (name, minimum, maximum, otherid) in list_of_ranges:
+                if minimum <= mean_precipitation_yearly < maximum:
+                    ax = fig8.add_subplot(otherid)
+                    ax.plot(dftemp_sorted.loc[:,"stdevscale"],dftemp_sorted.loc[:,'percentageNEE'])
+                    title_label = "ratio NEE precipitation"
+                    if minimum == 0:
+                        title_label = title_label + " <" + str(maximum)
+                    elif maximum == 9999999:
+                        title_label = title_label + " >" + str(minimum)
+                    else:
+                        title_label = title_label + " " + str(minimum) + "-" + str(maximum)
+                    ax.set_title(title_label)
+                    ax.set_xlabel("temperature stdev")
+                    ax.set_ylabel("ratio")
+            fig8.tight_layout()
+            fig8.savefig("NEE ratio and precipitation stdev.pdf")        
+                    
+                    # NEE measurement plots with different site vegetation
+            list_of_ranges = [
+                            ('fig7a', "Savannas", 7,2,1),
+                            ('fig7b', "Evergreen Needleleaf Forests",7,2,2),
+                            ('fig7c', "Cropland/Natural Vegetation Mosaic",7,2,3),
+                            ('fig7d', "Evergreen Broadleaf Forests",7,2,4),
+                            ('fig7e', "Deciduous Broadleaf Forests",7,2,5),
+                            ('fig7f', "Grasslands",7,2,6),
+                            ('fig7g', "Open Shrublands",7,2,7),
+                            ('fig7h', "Permanent Wetlands",7,2,8),
+                            ('fig7i', "Croplands",7,2,9),
+                            ('fig7j', "Mixed Forests",7,2,10),
+                            ('fig7k', "Woody Savannas",7,2,11),
+                            ('fig7l', "Closed Shrublands",7,2,12),
+                            ('fig7m', "Snow and Ice",7,2,13)]
+            
+            for (name, vegetation, left, right, number) in list_of_ranges:
+                if str(decoded[0]).strip() == vegetation:
+                    ax = fig9.add_subplot(left,right,number)
+                    ax.plot(dftemp_sorted.loc[:,"stdevscale"],dftemp_sorted.loc[:,'percentageNEE'])
+                    title_label = "ratio NEE vegetation" + " " + str(vegetation)
+                    ax.set_title(title_label)
+                    ax.set_xlabel("temperature stdev")
+                    ax.set_ylabel("ratio") 
+            fig9.tight_layout()
+            fig9.savefig("NEE ratio and vegetation stdev.pdf")
+    
+    #to show which sites are not suitable
+    else: 
+        print("not suitable")
+"""            
+      
+            
+            
+            
